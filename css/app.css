@@ -1,0 +1,63 @@
+/*** Common Style ***/
+.text-white {
+  color: white;
+}
+.text-wheat {
+  color: wheat;
+}
+.inversion {
+  transform: rotate(180deg);
+}
+.font-16 {
+  font-size: 16px;
+}
+.font-20 {
+  font-size: 20px;
+}
+.wrap {
+  margin: auto 30px
+}
+.btn_bg {
+  display: inline-block;
+  background: none;
+  border: 3px solid #fff;
+  border-radius: 100px;
+  margin: 0 10px;
+  color: #fff;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+.btn_md {
+  padding: 15px 35px;
+  font-size: 24px;
+}
+.btn_lg {
+  padding: 20px 50px;
+  font-size: 24px;
+}
+.footer {
+  position: fixed;
+  padding-bottom: 20px;
+  padding-top: 20px;
+  bottom: 0;
+}
+
+a:hover {
+  font-weight: 700;
+  color: wheat;
+}
+
+
+#logo {
+  width: 32px;
+  height: 32px;
+}
+#title {
+  color: wheat;
+  font-size: 42px;
+  margin-top: 50px;
+}
+#main {
+  margin-top: 10%;
+}

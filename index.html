@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>今日塔罗</title>
+  <link rel="shortcut icon" href="assert/img/tarot.ico">
+  <link rel="stylesheet" href="assert/css/bootstrap.min.css">
+  <link rel="stylesheet" href="css/app.css">
+  <script src="assert/js/jquery.min.js"></script>
+  <script src="assert/js/bootstrap.min.js"></script>
+</head>
+<body style="background-image: url('assert/img/bg1.jpg')">
+  <nav class="navbar navbar-inverse navbar-fixed-top" id="navbar"
+    style="background: rgba(0, 0, 0, 0.0); border: 0; display: none;">
+    <div class="container">
+      <div class="navbar-header">
+        <a href="#" class="navbar-brand" id="link_content">
+          <span><img class="logo" src="assert/img/tarot-white.png" alt="logo"/></span>
+          <span>&nbsp;星云塔罗屋</span>
+        </a>
+        <button type="button" class="navbar-toggle collapsed" data-toggle="collapse"
+          data-target="#navlist" aria-expanded="false" 
+          style="margin-top: 15px; margin-right: 30px;">
+          <span class="sr-only">Toggle navigation</span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+      </div>
+      <div class="navbar-collapse collapse" id="navlist" 
+        style="margin-top: 5px; margin-right: 15px;">
+        <ul class="nav navbar-nav navbar-right">
+          <li><a href="#" id="link_history">历史记录</a></li>
+          <!-- <li><a href="#" id="link_withdraw">合约提现</a></li> -->
+          <li><a href="#" id="link_about">关于网站</a></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container" id="main">
+    <h1 id="title" class="text-center">塔罗起源</h1>
+    <div class="row text-center text-white" id="intro">
+      <br/>
+      <p id="p_intro_1" class="font-20" style="display: none;">当古代埃及法老遇到疑难之时</p>
+      <p id="p_intro_2" class="font-20" style="display: none;">就会打开这本"罗洁爱尔之书"</p>
+      <p id="p_intro_3" class="font-20" style="display: none;">随后所有的问题便能迎刃而解</p>
+      <p id="p_intro_4" class="font-20" style="display: none;">为了防止其落入异族魔手</p>
+      <p id="p_intro_5" class="font-20" style="display: none;">神职人员将其绘在卡片上并交于神官</p>
+      <p id="p_intro_6" class="font-20" style="display: none;">最后由亚历山大大帝带入欧洲</p>
+      <p id="p_intro_7" class="font-20" style="display: none;">形成了我们所使用的塔罗牌</p>
+    </div>
+    <div class="row text-center text-white" id="content" style="display:none;">
+      <div id="page_guide" style="display: none;">
+        <br/>
+        <p id="p_content_1" class="font-20" style="display: none;">静下来，倾听内心的声音</p>
+        <p id="p_content_2" class="font-20" style="display: none;">默念心中的疑惑，将其传递给牌组</p>
+        <p id="p_content_3" class="font-20" style="display: none;">集中精神，抽取塔罗</p><br/>
+        <button type="button" id="btn_drawtarot" class="btn_bg btn_lg" style="display: none;">
+          <span><img class="logo" src="assert/img/tarot-white.png" alt="logo"/></span>
+          <span>&nbsp;抽取塔罗</span>
+        </button>
+      </div>
+
+      <div id="page_loading" style="display: none;">
+        <br/><br/>
+        <p id="tx_loading" class="font-20">正在抽牌</p>
+      </div>
+
+      <div id="page_result" style="display: none;">
+        <p id="tx_tip" class="wrap font-16 text_wheat" style="display: none;">
+          Tip：以下为您今日抽取的结果，每个钱包地址每日只能抽取一次塔罗哦
+        </p>
+        <h2 id="result_name" style="display: none;">
+          <b id="tx_name"></b>
+        </h2>
+        <h3 id="result_diretion" style="display: none;">
+          正逆：<b id="tx_direction"></b>
+        </h3>
+        <img id="img_result" src=""  style="display: none;">
+        <h2 id="result_desc" style="display: none;">寓意：</h2>
+        <p id="tx_result_desc" class="wrap" style="display: none;"></p>
+      </div>
+
+      <div id="page_wallet" style="display: none;">
+        <h3 id="tx_wallet">请重新确认插件安装及钱包导入, 随后刷新页面</h3>
+        <br/><br/>
+        <div id="part_wallet">
+          <a href="https://blog.nebulas.io/2018/04/12/creating-a-nas-wallet/" 
+            target="_blank"class="btn_bg btn_md">
+            创建钱包
+          </a>
+          <a href="https://github.com/ChengOrangeJu/WebExtensionWallet" target="_blank"
+            class="btn_bg btn_md">
+            插件及教程
+        </a>
+        </div>
+      </div>
+    </div>
+    <div class="row text-center text-white" id="history" style="display:none;">
+      <!-- <h1 id="title">历史记录</h1> -->
+      <br/>
+      <div class="table-responsive" id="page_table" style="display:none;"> 
+        <table class="table">
+          <thead>
+            <tr>
+              <th class="text-center">日期</th>
+              <th class="text-center">塔罗结果</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div id="page_detail" style="display: none;">
+        <h2 id="detail_name" style="display: none;"><b></b></h2>
+        <h3 id="detail_diretion" style="display: none;">
+          正逆：<b></b>
+        </h3>
+        <img id="img_detail" src=""  style="display: none;">
+        <h2 id="detail_desc" style="display: none;">寓意：</h2>
+        <p id="tx_detail_desc" class="wrap" style="display: none;"></p>
+      </div>
+    </div>
+    <!-- <div class="row text-white" id="withdraw" style="display:none;">
+        <br/>
+        <div class="row">
+          <form class="form-horizontal" id="page_withdraw" style="display: none;">
+            <div class="form-group">
+              <label for="addr_withdraw" class="col-md-1 col-sm-2 col-xs-6 col-sm-offset-2 col-xs-offset-3">提现地址</label>
+              <div class="col-md-6 col-sm-7 col-xs-6 col-sm-offset-0 col-xs-offset-3">
+                <input type="text" class="form-control" id="addr_withdraw" placeholder="请输入提现地址">
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="value_withdraw" class="col-md-1 col-sm-2 col-xs-8 col-sm-offset-2 col-xs-offset-3">提现数额</label>
+              <div class="col-md-6 col-sm-7 col-xs-6 col-sm-offset-0 col-xs-offset-3">
+                <input type="number" class="form-control" id="value_withdraw" placeholder="请输入提现数额(NAS)">
+              </div>
+            </div>
+            <div class="form-group">
+              <div class="col-md-offset-3 col-sm-offset-4 col-xs-offset-3 col-md-6 col-sm-7 col-xs-6">
+                <button type="button" class="btn btn-default" id="btn_withdraw">提现</button>
+              </div>
+            </div>
+          </form>
+        </div>
+    </div>     -->
+    <div class="row text-center text-white" id="about" style="display:none;">
+      <br/><br/><br/>
+      <div class="row">「星云塔罗屋」基于星云3.0公链开发</div><br/>
+      <div class="row">塔罗结果数据存储于星云链，真实有效无法篡改</div><br/><br/><br/>
+      <div class="row">DApp开发简单初尝试</div>
+      <div class="row">
+        作品源码：<a href="#" class="text-wheat">nebulas-tarot</a>
+        (欢迎star)
+      </div>
+      <div class="row">
+        作者：<a href="https://github.com/Nodreame" class="text-wheat">Nodreame</a>
+      </div><br/>
+      <div class="row">Copright &copy; 2018 Nebulas-tarot</div>
+      <div class="row">All Rights Reserved</div>
+    </div>
+  </div>
+  <script src="assert/js/nebulas.js"></script>
+  <script src="assert/js/nebPay.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

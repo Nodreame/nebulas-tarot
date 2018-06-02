@@ -1,0 +1,12 @@
+{
+  "name": "nebulas-tarot",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "http-server"
+  },
+  "author": "Nodreame",
+  "license": "MIT",
+  "dependencies": {
+    "http-server": "^0.11.1"
+  }
+}
