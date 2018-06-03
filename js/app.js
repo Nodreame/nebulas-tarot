@@ -12,37 +12,35 @@ var tx_result_desc= $('#tx_result_desc');
 var img_result    = $('#img_result');
 
 var _g        = {};
+_g.contract   = {};
 _g.state      = {};
 _g.draw       = {};
 _g.wallet     = {};
-_g.contract   = {};
 _g.transaction= {};
-// state
-_g.state.isDebugging= false;
-_g.state.nowModule  = 'content';
-_g.state.isChanging = false;
-_g.state.changeTime = 1000;
-_g.state.contentPage= '';
-_g.state.historyPage= '';
-// draw
-_g.draw.prefix_img = 'assert/img/MajorArcana/';
-_g.draw.num    = -1;     // 抽牌数字
-_g.draw.maxnum = 43;
-_g.draw.allData= [];
-_g.draw.tarotList  = [];
-_g.draw.total  = 0;
-_g.draw.historyData = [];
-// wallet              MY: 'n1J7r1GDiHQ9Zc8XVzjPkwua68PQZ4dGH3L'
-_g.wallet.address     = '';
-_g.wallet.balance     = -1;
-_g.wallet.type        = 87;
-_g.wallet.plugInExist = false;
-_g.wallet.addrExist   = false;
 // contract
 _g.contract.mainnetUrl = 'https://mainnet.nebulas.io';
 _g.contract.testnetUrl = 'https://testnet.nebulas.io';
 _g.contract.address = _g.state.isDebugging? 'n1vTNx5Q2hx8KALF1NFTxu7KMh5LWEsVRPo': 'n1g5eFS5Egx3Nykigv6uAEaczDgXunirz29';    
-_g.transaction.isFinish= true;
+// state
+_g.state.isDebugging= false;        // use to sign now is main/test
+_g.state.isChanging = false;        // use to prevent switch module to fast
+_g.state.changeTime = 1000;
+_g.state.nowModule  = 'content';
+// draw
+_g.draw.imgUrlPrefix= 'assert/img/MajorArcana/';
+_g.draw.num         = -1;     // num of draw
+_g.draw.maxnum      = 43;     // tarotsNum, it may change when use different tarot mode
+_g.draw.total       = 0;      // total times of user draw
+_g.draw.tarotList   = [];     // all data of tarot (hardcode in data/data.json)
+_g.draw.allData     = [];     // all records of you
+_g.draw.historyData = [];     // all records for show (just use allData is ok but this is faster)
+// wallet
+_g.wallet.address     = '';   // address read from wallet/walletExtension
+_g.wallet.balance     = -1;   // balance read from wallet/walletExtension
+_g.wallet.type        = 87;   // 0-illegality, 87-user wallet, 88-contract wallet
+_g.wallet.plugInExist = false;// if walletExtension exist
+// transaction
+_g.transaction.isFinish= true;    // TODO: if transaction cancel, stop&hide loading, show guide
 
 var nebulas = require('nebulas');
 var Account = nebulas.Account;
@@ -50,7 +48,6 @@ var Neb = new nebulas.Neb();
 Neb.setRequest(new nebulas.HttpRequest(_g.state.isDebugging? _g.contract.testnetUrl: _g.contract.mainnetUrl));
 var NebPay = require('nebpay');
 var nebPay = new NebPay();
-
 // console.log('nebulas:', nebulas);
 // console.log('Account:', Account);
 // console.log('Neb:', Neb);
@@ -65,19 +62,7 @@ function detectWallet () {
     console.error('wallet no exist');
   }
 }
-// get wallet balance、type
-function getAccountState() {  
-  if (Neb.api) {
-    Neb.api.getAccountState({
-      address: _g.wallet.address
-    }).then (function (data) {
-      console.log('accountState:', data);
-      _g.wallet.balance = data.balance;
-      _g.wallet.type    = data.type;
-    });
-  }
-}
-
+ 
 /*** chain method ***/
 function save (callback, num) {
   var listenCount = 0;
@@ -110,7 +95,7 @@ function save (callback, num) {
   var to        = _g.contract.address;
   var value     = '0';
   var callFunc  = 'save';
-  var callArgs  = JSON.stringify([_g.draw.num, _g.draw.time]);
+  var callArgs  = JSON.stringify([num, Date.now()]);
   var options   = {
     goods: {
       name: "tarot result"
@@ -172,6 +157,8 @@ function getDrawTotal () {
     }).then(function (data) {
       console.log('getDrawTotal:', data);
       _g.draw.total = parseInt(data.result);
+      $('#tx_total').html('');
+      $('#tx_total').html('应用现已成功抽取<span class="text-wheat">'+_g.draw.total+'</span>次塔罗牌.');
       return parseInt(data.result);
     });
   }
@@ -204,27 +191,26 @@ function getTarotList () {
     dataType: 'json',
     url: 'data/data.json',
     success: function(result) {
-      console.log('tarotList:', result);
+      // console.log('tarotList:', result);
       _g.draw.tarotList = result;
       return result;
     }
+    // TODO: if fail
   });
 }
-// random a draw num
-function drawTarotNum () {
-  return Math.floor(Math.random() * (_g.draw.maxnum+1));
-}
-function getCard(num) {
-  console.log('num:', num);
+// get a tarot obj
+function getTarot(num) {
+  // console.log('num:', num);
   var tarot = {};
   var halfNum = (_g.draw.maxnum + 1)/2;
   var tarotNum = -1;
-  if (num) {                      // 有num用num
+  // get tarotNum
+  if (num) {
     tarotNum = num? num: -1;
-  } else if (_g.draw.num < 0) {   // 无num & _g.draw.num 就抽
+  } else if (_g.draw.num < 0) {
     _g.draw.num = drawTarotNum();
     tarotNum = _g.draw.num;
-  } else {                        // 无num & 有_g.draw.num直接赋值
+  } else {
     tarotNum = _g.draw.num;
   }
   if (tarotNum >= halfNum) {
@@ -233,12 +219,16 @@ function getCard(num) {
   } else {
     tarot.direction = true;
   }
-  console.log('tarotNum:', tarotNum);
+  // console.log('tarotNum:', tarotNum);
   tarot.name   = _g.draw.tarotList[tarotNum].name;
-  tarot.imgUrl = _g.draw.prefix_img + _g.draw.tarotList[tarotNum].imgUrl;
+  tarot.imgUrl = _g.draw.imgUrlPrefix + _g.draw.tarotList[tarotNum].imgUrl;
   tarot.desc   = tarot.direction? 
     _g.draw.tarotList[tarotNum].detail.desc.normotopia: _g.draw.tarotList[tarotNum].detail.desc.inversion;
   return tarot;
+}
+// random a draw num
+function drawTarotNum () {
+  return Math.floor(Math.random() * (_g.draw.maxnum+1));
 }
 // judge if the last record of this address in today
 function getTodayState () {
@@ -254,27 +244,23 @@ function getTodayState () {
     if (createDate.getFullYear() === now.getFullYear()
       && createDate.getMonth() === now.getMonth()
       && createDate.getDate()  === now.getDate()) {
-        // _g.draw.isDraw = true;
         _g.draw.num = _g.draw.allData[0].num;
-        // console.log('_g.draw.isDraw:'+_g.draw.isDraw+',_g.draw.num:'+_g.draw.num);
         console.log('_g.draw.num:'+_g.draw.num);
         return _g.draw.allData[0].num;
     }
   }
-  // _g.draw.isDraw = false;
   _g.draw.num = -1;
   return -1;
 }
-// prepare data for history
+// _g.draw.allData -> _g.draw.historyData
 function getHistoryData () {
-  // _g.draw.allData -> _g.draw.historyData
   _g.draw.historyData.length = 0;
   _g.draw.allData.forEach(element => {
     var time = new Date(element.createdate);
     var createDateStr = time.getFullYear()    + '年'
                         + (time.getMonth()+1) + '月'
                         + time.getDate()      + '日';
-    var tarot = getCard(element.num);
+    var tarot = getTarot(element.num);
     var direction = tarot.direction? '正位': '逆位';
     var tarotStr = tarot.name + '(' + direction + ')';
     _g.draw.historyData.push({'num': element.num, 'tarot': tarotStr, 'createdate': createDateStr});
@@ -284,7 +270,6 @@ function getHistoryData () {
 
 
 /*** page method ***/
-// state
 function changeModule (module) {
   if (_g.state.nowModule === module) { return; }
   if (_g.state.isChanging) { return; }
@@ -307,10 +292,10 @@ function changeModule (module) {
 function preventChange (ts) {
   ts = ts? ts: _g.state.changeTime;
   _g.state.isChanging = true;
-  console.log('Module changing start!');
+  // console.log('Module changing start!');
   setTimeout(function () {
     _g.state.isChanging= false;
-    console.log('now finish change!');
+    // console.log('now finish change!');
   }, ts);
 }
 // content
@@ -322,21 +307,21 @@ function initIntro () {
     $('#p_intro_3').fadeIn(1000);
     $('#p_intro_4').fadeIn(3000);
     $('#p_intro_5').fadeIn(3000);
-    $('#p_intro_6').fadeIn(6000);
-    $('#p_intro_7').fadeIn(6000);
+    $('#p_intro_6').fadeIn(5000);
+    $('#p_intro_7').fadeIn(5000);
   }, 500);
   setTimeout(function () {
     $('#intro').fadeOut();
     $('#navbar').fadeIn();
     initContent(decideContentPage());
-  }, 6500);
+  }, 5500);
 }
+// judge targetPage by state
 function decideContentPage () {
   var targetPage = '';
   if (!_g.wallet.plugInExist | !_g.wallet.address | _g.wallet.address.length !== 35) {
     targetPage = 'wallet';
   } else if (_g.draw.num < 0) {  // TODO: 考虑网速
-    // !_g.draw.isDraw &&
     targetPage = 'guide';
   } else {
     targetPage = 'result';
@@ -352,9 +337,7 @@ function initContent (pagename) {
   $('#withdraw').fadeOut();
   $('#about').fadeOut();
   setTimeout(function () {
-    // if (_g.state.contentPage !== pagename) {
       $('#content').fadeIn();
-      _g.state.contentPage = pagename;
       switch(pagename) {
         case 'guide':
           initGuidePage();
@@ -369,7 +352,6 @@ function initContent (pagename) {
           initWalletPage();
           break;
       }
-    // }
   }, 500);
 }
 function initGuidePage () {
@@ -414,7 +396,7 @@ function initResultPage (num) {
 
   setTimeout(function () {
     page_result.fadeIn();
-    var tarot = getCard(num);
+    var tarot = getTarot(num);
     if (!num) {
       $('#tx_tip').fadeIn();
       setTimeout(function () {
@@ -483,7 +465,7 @@ function initDetailPart (num) {
   $('#page_table').fadeOut();
   setTimeout(function () {
     $('#page_detail').fadeIn();
-    var tarot = getCard(num);
+    var tarot = getTarot(num);
 
     $('#detail_name b').text(tarot.name);
     $('#detail_diretion b').text(tarot.direction? '正位':'逆位');
@@ -540,12 +522,8 @@ btn_drawtarot.on('click', function () {
   // start loading
   page_guide.hide();
   page_loading.show();
-  initLoadingPage();
-  // draw & save
-  _g.draw.num = drawTarotNum();
-  _g.draw.time= Date.now();
-  console.log('_g.draw.num:'+_g.draw.num+', _g.draw.time:'+_g.draw.time);
-  save(initResultPage, _g.draw.num);
+  initContent('loading');
+  save(initResultPage, drawTarotNum());
 });
 $('#link_content').on('click', function () {
   changeModule('content');
@@ -560,14 +538,12 @@ $('#link_about').on('click', function () {
   changeModule('about');
 });
 $('#btn_withdraw').on('click', function () {
-  // TODO: verityAddress & transfer
   var addr = $('#addr_withdraw').val().trim();
   var value= $('#value_withdraw').val();
   if (addr && value) {
     console.log('addr:'+addr+', value:'+value);
     withDraw(addr, value);
   } else {
-    // TODO: show tip
     console.log('add & value `can\'t be null');
   }
 });
@@ -595,3 +571,17 @@ window.addEventListener('message', function (e) {
 });
 // run page
 initIntro();
+
+
+// get wallet balance、type(gg)
+// function getAccountState() {  
+//   if (Neb.api) {
+//     Neb.api.getAccountState({
+//       address: _g.wallet.address
+//     }).then (function (data) {
+//       console.log('accountState:', data);
+//       _g.wallet.balance = data.balance;
+//       _g.wallet.type    = data.type;
+//     });
+//   }
+// }
