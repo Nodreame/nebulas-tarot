@@ -421,13 +421,16 @@ function initWalletPage () {
   page_guide.fadeOut();
   page_loading.fadeOut();
   page_result.fadeOut();
-  if ( !_g.wallet.address || _g.wallet.address.length !== 35) {
+  if (!_g.wallet.plugInExist) {
+    title.text('未检测到浏览器钱包插件');
+    page_wallet.fadeIn();
+  } else if (!_g.wallet.address || _g.wallet.address.length !== 35) {
     title.text('钱包地址查询失败');
     $('#tx_wallet').text('请将钱包导入插件，随后刷新页面');
     page_wallet.fadeIn();
   } else {
-    title.text('未检测到浏览器钱包插件');
-    page_wallet.fadeIn();
+    console.log('emmm');
+    initContent('guide');
   }
 }
 
