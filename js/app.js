@@ -40,7 +40,6 @@ _g.wallet.balance     = -1;   // balance read from wallet/walletExtension
 _g.wallet.type        = 87;   // 0-illegality, 87-user wallet, 88-contract wallet
 _g.wallet.plugInExist = false;// if walletExtension exist
 // transaction
-_g.transaction.isFinish= true;    // TODO: if transaction cancel, stop&hide loading, show guide
 
 var nebulas = require('nebulas');
 var Account = nebulas.Account;
@@ -66,31 +65,48 @@ function detectWallet () {
 /*** chain method ***/
 function save (callback, num) {
   var listenCount = 0;
-  _g.transaction.isFinish = false;
-  var nebPayListener = function (data) {
-    console.log('nebPayListener data:', data);
-    if (listenCount < 15) {
+  var writerListener = function (data) {
+    console.log('writerListener data:', data);
+    if (listenCount < 8) {
       Neb.api.getTransactionReceipt({
         hash: data.txhash
       }).then (function (response) { // status: 2(pending) 1(success)
         console.log('response:', response); 
         if (response.status === 1) {
-          console.log('success!');
-          _g.transaction.isFinish = true;
-          callback.call(this, num);
+          console.log('transaction success!');
+          alert('塔罗记录写入星云链成功!');
           getData();
         } else {
           listenCount++;
           setTimeout(() => {
-            nebPayListener(data);
+            writerListener(data);
           }, 5000);
         }
       });
     } else {
+      console.log('timeout');
+      alert('timeout');
       // TODO: stop 抽牌
-      // TODO: 取消交易
     }
-  }  
+  }; 
+  var cbStart = function (data) {
+    console.log("callback data: " + JSON.stringify(data));
+    console.log('JSON.stringify(data).indexOf(\'Erro\'):', JSON.stringify(data).indexOf('Error'));
+    if (JSON.stringify(data).indexOf('Error') === -1) {
+      // alert('请求已发送');
+      tx_loading.text('请求已发送');
+      setTimeout(function () {
+        writerListener(data);       // listener of writing state
+        callback.call(this, num);
+      }, 1000);
+    } else {
+      alert('请求已取消');
+      initContent('guide');
+    }
+  };
+  var cbStartTest = function (data) {
+    tx_loading.text(JSON.stringify(data));
+  }
 
   var to        = _g.contract.address;
   var value     = '0';
@@ -101,23 +117,43 @@ function save (callback, num) {
       name: "tarot result"
     },
     callback: _g.state.isDebugging? NebPay.config.testnetUrl: NebPay.config.mainnetUrl,
-    listener: nebPayListener
+    // listener: cbStart
+    // listener: cbStartTest
   };
   _g.transaction.serialNum = nebPay.call(to, value, callFunc, callArgs, options);
+  console.log('_g.transaction.serialNum:', _g.transaction.serialNum);
   /*** can't get success callback ***/
-  // _g.transaction.intervalQuery = setInterval(function() {
-  //   nebPay.queryPayInfo(_g.transaction.serialNum, options)
-  //     .then(function (dataStr) {
-  //       var data = JSON.parse(dataStr);
-  //       console.log('data:', data);
-  //       if (data.code === 0 && data.data.status === 1) {
-  //         clearInterval(_g.transaction.intervalQuery);
-  //       }
-  //     })
-  //     .catch(function (error) {
-  //       console.log(error);
-  //     });
-  // }, 10000);
+  _g.transaction.intervalQuery = setInterval(function() {
+    nebPay.queryPayInfo(_g.transaction.serialNum, options)
+      .then(function (dataStr) {
+        if (listenCount < 8) {
+          var data = JSON.parse(dataStr);
+          console.log('data:', data);
+          if (data.code === 0 && data.data.status === 1) {    // TODO: 学习这两个状态
+            callback.call(this, num);
+            clearInterval(_g.transaction.intervalQuery);
+          } else {
+            console.log("data.msg.indexOf('does not exist')", data.msg.indexOf('does not exist'));
+            console.log('listenCount:', listenCount);
+            if (data.msg.indexOf('does not exist') !== -1 && listenCount>4) {
+              console.log('已取消');
+              initContent('guide');
+              clearInterval(_g.transaction.intervalQuery);
+            }
+          }
+          listenCount++;
+        } else {
+          console.log('网络连接超时, 5秒后自动刷新网页');
+          clearInterval(_g.transaction.intervalQuery);
+          setTimeout(function () {
+            window.location.reload(); 
+          }, 5000);
+        }
+      })
+      .catch(function (error) {
+        console.error(error);
+      });
+  }, 10000);
 }
 // get datalist by address
 function getData () {
@@ -232,7 +268,7 @@ function drawTarotNum () {
 }
 // judge if the last record of this address in today
 function getTodayState () {
-  if (_g.draw.allData.length > 0) {
+  if (_g.draw.allData.length > 0) {  // TODO: modify to 0
     var now = new Date();
     console.log('Today: ' + now.getFullYear()   + '年'
                           + (now.getMonth()+1)  + '月'
@@ -319,9 +355,10 @@ function initIntro () {
 // judge targetPage by state
 function decideContentPage () {
   var targetPage = '';
-  if (!_g.wallet.plugInExist | !_g.wallet.address | _g.wallet.address.length !== 35) {
-    targetPage = 'wallet';
-  } else if (_g.draw.num < 0) {  // TODO: 考虑网速
+  // if (!_g.wallet.plugInExist | !_g.wallet.address | _g.wallet.address.length !== 35) {
+  // targetPage = 'wallet';
+  // } else 
+  if (_g.draw.num < 0) {  // TODO: 考虑网速
     targetPage = 'guide';
   } else {
     targetPage = 'result';
@@ -370,22 +407,15 @@ function initGuidePage () {
 }
 function initLoadingPage () {
   title.text('今日塔罗');
+  console.log('initLoadingPage');
   // TODO: js洗牌动画
   // loading text
   page_guide.fadeOut();
   page_result.fadeOut();
   page_wallet.fadeOut();
-  var drawTarot_interval = setInterval(function () {
-    var content = tx_loading.text() + '.';
-    tx_loading.text(content);
-  }, 1000);
   setTimeout(function () {
-    clearInterval(drawTarot_interval);
-    if (!_g.transaction.isFinish) {
-      tx_loading.text("正在抽牌");
-      initLoadingPage();
-    }
-  }, 3000);
+    page_loading.show();
+  }, 500);
 }
 function initResultPage (num) {
   title.text('今日塔罗');
@@ -522,8 +552,9 @@ function initAboutPart() {
 btn_drawtarot.on('click', function () {
   console.log('btn_drawtarot click');
   // start loading
-  page_guide.hide();
-  page_loading.show();
+  // if (!_g.wallet.plugInExist | !_g.wallet.address | _g.wallet.address.length !== 35) {
+  // targetPage = 'wallet';
+  // } else 
   initContent('loading');
   save(initResultPage, drawTarotNum());
 });
