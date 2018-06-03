@@ -70,6 +70,8 @@ http-server
     - [ ] Method
     - [ ] Operate
   - [ ] Contract
+    - [ ] 切换module
+    - [ ] 正常抽牌
 - [ ] Mobile First
   - [ ] Wallet in mobile
     - [ ] 无法调用钱包插件的情况

@@ -61,3 +61,9 @@ a:hover {
 #main {
   margin-top: 10%;
 }
+
+@media (min-width: 768px){
+  #title {
+    margin-top: 20px;
+  }
+}

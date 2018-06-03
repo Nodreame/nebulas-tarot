@@ -3,6 +3,7 @@ var title         = $('#title');
 var page_guide    = $('#page_guide');
 var page_loading  = $('#page_loading');
 var page_result   = $('#page_result');
+var page_wallet   = $('#page_wallet');
 var btn_drawtarot = $('#btn_drawtarot');
 var tx_loading    = $('#tx_loading');
 var tx_name       = $('#tx_name');
@@ -17,6 +18,7 @@ _g.wallet     = {};
 _g.contract   = {};
 _g.transaction= {};
 // state
+_g.state.isDebugging= false;
 _g.state.nowModule  = 'content';
 _g.state.isChanging = false;
 _g.state.changeTime = 1000;
@@ -25,7 +27,6 @@ _g.state.historyPage= '';
 // draw
 _g.draw.prefix_img = 'assert/img/MajorArcana/';
 _g.draw.num    = -1;     // 抽牌数字
-_g.draw.isDraw = false;  // 今天是否已抽牌
 _g.draw.maxnum = 43;
 _g.draw.allData= [];
 _g.draw.tarotList  = [];
@@ -40,17 +41,13 @@ _g.wallet.addrExist   = false;
 // contract
 _g.contract.mainnetUrl = 'https://mainnet.nebulas.io';
 _g.contract.testnetUrl = 'https://testnet.nebulas.io';
-// testNet
-// _g.contract.address = 'n1vTNx5Q2hx8KALF1NFTxu7KMh5LWEsVRPo';    
-// mainNet
-_g.contract.address = 'n1g5eFS5Egx3Nykigv6uAEaczDgXunirz29';    
+_g.contract.address = _g.state.isDebugging? 'n1vTNx5Q2hx8KALF1NFTxu7KMh5LWEsVRPo': 'n1g5eFS5Egx3Nykigv6uAEaczDgXunirz29';    
 _g.transaction.isFinish= true;
 
 var nebulas = require('nebulas');
 var Account = nebulas.Account;
 var Neb = new nebulas.Neb();
-// Neb.setRequest(new nebulas.HttpRequest('https://testnet.nebulas.io'));
-Neb.setRequest(new nebulas.HttpRequest('https://mainnet.nebulas.io'));
+Neb.setRequest(new nebulas.HttpRequest(_g.state.isDebugging? _g.contract.testnetUrl: _g.contract.mainnetUrl));
 var NebPay = require('nebpay');
 var nebPay = new NebPay();
 
@@ -82,7 +79,7 @@ function getAccountState() {
 }
 
 /*** chain method ***/
-function save (callback) {
+function save (callback, num) {
   var listenCount = 0;
   _g.transaction.isFinish = false;
   var nebPayListener = function (data) {
@@ -95,7 +92,7 @@ function save (callback) {
         if (response.status === 1) {
           console.log('success!');
           _g.transaction.isFinish = true;
-          callback.call(this);
+          callback.call(this, num);
           getData();
         } else {
           listenCount++;
@@ -118,8 +115,7 @@ function save (callback) {
     goods: {
       name: "tarot result"
     },
-    callback: NebPay.config.mainnetUrl,
-    // callback: NebPay.config.testnetUrl,
+    callback: _g.state.isDebugging? NebPay.config.testnetUrl: NebPay.config.mainnetUrl,
     listener: nebPayListener
   };
   _g.transaction.serialNum = nebPay.call(to, value, callFunc, callArgs, options);
@@ -138,9 +134,6 @@ function save (callback) {
   //     });
   // }, 10000);
 }
-
-
-
 // get datalist by address
 function getData () {
   if (Neb.api) {
@@ -249,30 +242,33 @@ function getCard(num) {
 }
 // judge if the last record of this address in today
 function getTodayState () {
-  if (_g.draw.allData.length !== 0) {
+  if (_g.draw.allData.length > 0) {
     var now = new Date();
     console.log('Today: ' + now.getFullYear()   + '年'
                           + (now.getMonth()+1)  + '月'
                           + now.getDate()       + '日');
     var createDate = new Date(_g.draw.allData[0].createdate);
-    console.log('createDate:' + createDate.getFullYear()  + '年'
+    console.log('CreateDate:' + createDate.getFullYear()  + '年'
                               + (createDate.getMonth()+1) + '月'
                               + createDate.getDate()      + '日');
     if (createDate.getFullYear() === now.getFullYear()
       && createDate.getMonth() === now.getMonth()
       && createDate.getDate()  === now.getDate()) {
-        _g.draw.isDraw = true;
+        // _g.draw.isDraw = true;
         _g.draw.num = _g.draw.allData[0].num;
+        // console.log('_g.draw.isDraw:'+_g.draw.isDraw+',_g.draw.num:'+_g.draw.num);
+        console.log('_g.draw.num:'+_g.draw.num);
         return _g.draw.allData[0].num;
     }
   }
-  _g.draw.isDraw = false;
+  // _g.draw.isDraw = false;
   _g.draw.num = -1;
   return -1;
 }
 // prepare data for history
 function getHistoryData () {
   // _g.draw.allData -> _g.draw.historyData
+  _g.draw.historyData.length = 0;
   _g.draw.allData.forEach(element => {
     var time = new Date(element.createdate);
     var createDateStr = time.getFullYear()    + '年'
@@ -294,19 +290,15 @@ function changeModule (module) {
   if (_g.state.isChanging) { return; }
   switch (module) {
     case 'content':
-      title.text('今日塔罗');
       initContent();
       break;
     case 'history':
-      title.text('往日回溯');
       initHistory();
       break;
     case 'withdraw':
-      title.text('合约提现');
       initWithdraw();
       break;
     case 'about':
-      title.text('关于作品');
       initAbout();
       break;
   }
@@ -342,8 +334,9 @@ function initIntro () {
 function decideContentPage () {
   var targetPage = '';
   if (!_g.wallet.plugInExist | !_g.wallet.address | _g.wallet.address.length !== 35) {
-    targetPage = 'wallet';  // TODO: _g.wallet.address放在wallet中判断
-  } else if (!_g.draw.isDraw && _g.draw.num<0) {  // TODO: 考虑网速
+    targetPage = 'wallet';
+  } else if (_g.draw.num < 0) {  // TODO: 考虑网速
+    // !_g.draw.isDraw &&
     targetPage = 'guide';
   } else {
     targetPage = 'result';
@@ -353,43 +346,53 @@ function decideContentPage () {
   return targetPage;
 }
 function initContent (pagename) {
-  // _g.state.contentPage
+  pagename = pagename? pagename: decideContentPage();
   preventChange();
   $('#history').fadeOut();
   $('#withdraw').fadeOut();
   $('#about').fadeOut();
   setTimeout(function () {
-    if (_g.state.contentPage !== pagename) {
+    // if (_g.state.contentPage !== pagename) {
+      $('#content').fadeIn();
+      _g.state.contentPage = pagename;
       switch(pagename) {
         case 'guide':
-          initGuidePart();
+          initGuidePage();
           break;
         case 'loading':
-          initLoadingPart();
+          initLoadingPage();
           break;
         case 'result':
-          initResultPart();
+          initResultPage();
           break;
         case 'wallet':
-          initWallet();
+          initWalletPage();
           break;
       }
-    }
+    // }
   }, 500);
 }
-function initGuidePart () {
-  console.log('initGuidePart:', _g.draw.num);
+function initGuidePage () {
   title.text('今日塔罗');
-  title.fadeIn();
-  page_guide.fadeIn();
-  $('#p_content_1').fadeIn(2000);
-  $('#p_content_2').fadeIn(3000);
-  $('#p_content_3').fadeIn(4000);
-  btn_drawtarot.fadeIn(5000);
+  console.log('initGuidePage:', _g.draw.num);
+  page_loading.fadeOut();
+  page_result.fadeOut();
+  page_wallet.fadeOut();
+  setTimeout(function () {
+    page_guide.fadeIn();
+    $('#p_content_1').fadeIn(1000);
+    $('#p_content_2').fadeIn(1000);
+    $('#p_content_3').fadeIn(1000);
+    btn_drawtarot.fadeIn(2000);
+  }, 500);
 }
-function initLoadingPart () {
+function initLoadingPage () {
+  title.text('今日塔罗');
   // TODO: js洗牌动画
   // loading text
+  page_guide.fadeOut();
+  page_result.fadeOut();
+  page_wallet.fadeOut();
   var drawTarot_interval = setInterval(function () {
     var content = tx_loading.text() + '.';
     tx_loading.text(content);
@@ -398,52 +401,58 @@ function initLoadingPart () {
     clearInterval(drawTarot_interval);
     if (!_g.transaction.isFinish) {
       tx_loading.text("正在抽牌");
-      initLoadingPart();
+      initLoadingPage();
     }
   }, 3000);
 }
-function initResultPart () {
-  console.log('initResultPart');
+function initResultPage (num) {
+  title.text('今日塔罗');
+  console.log('initResultPage');
+  page_guide.fadeOut();
   page_loading.fadeOut();
-  page_result.fadeIn();
-  var tarot = getCard();
+  page_wallet.fadeOut();
 
-  _g.draw.isDraw? $('#tx_tip').show(): '';
-  if (_g.draw.isDraw) {
-    $('#tx_tip').fadeIn();
-    setTimeout(function () {
-      $('#tx_tip').fadeOut(1000);
-    }, 2000);
-  }
-  tx_name.text(tarot.name);
-  tx_direction.text(tarot.direction? '正位':'逆位');
-  img_result.attr('class', tarot.direction? '': 'inversion');
-  img_result.attr('src', tarot.imgUrl);
-  tx_result_desc.text(tarot.desc);
-  
-  // fadeIn
-  $('#result_name').fadeIn(1000);
-  $('#result_diretion').fadeIn(2000);
-  img_result.fadeIn(3000);
-  $('#result_desc').fadeIn(4000);
-  tx_result_desc.fadeIn(5000);
+  setTimeout(function () {
+    page_result.fadeIn();
+    var tarot = getCard(num);
+    if (!num) {
+      $('#tx_tip').fadeIn();
+      setTimeout(function () {
+        $('#tx_tip').fadeOut(1000);
+      }, 2000);
+    }
+    tx_name.text(tarot.name);
+    tx_direction.text(tarot.direction? '正位':'逆位');
+    img_result.attr('class', tarot.direction? '': 'inversion');
+    img_result.attr('src', tarot.imgUrl);
+    tx_result_desc.text(tarot.desc);
+    
+    // fadeIn
+    $('#result_name').fadeIn(1000);
+    $('#result_diretion').fadeIn(2000);
+    img_result.fadeIn(3000);
+    $('#result_desc').fadeIn(4000);
+    tx_result_desc.fadeIn(5000);
+  }, 500);
 }
-function initWallet (msg) {
-  if (msg === 'address') {
+function initWalletPage () {
+  page_guide.fadeOut();
+  page_loading.fadeOut();
+  page_result.fadeOut();
+  if ( !_g.wallet.address || _g.wallet.address.length !== 35) {
     title.text('钱包地址查询失败');
-    title.fadeIn();
     $('#tx_wallet').text('请将钱包导入插件，随后刷新页面');
-    $('#page_wallet').fadeIn();
+    page_wallet.fadeIn();
   } else {
     title.text('未检测到浏览器钱包插件');
-    title.fadeIn();
-    $('#page_wallet').fadeIn();
+    page_wallet.fadeIn();
   }
 }
 
 // history
 function initHistory () {
   preventChange();
+  title.text('往日回溯');
   $('#content').fadeOut();
   $('#withdraw').fadeOut();
   $('#about').fadeOut();
@@ -454,17 +463,18 @@ function initHistory () {
   }, 500);
 }
 function initTablePart () {
-  $('tbody').empty();
+  console.log("$('#page_table table tbody'):", $('#page_table table tbody'));
+  $('#page_table table tbody').empty();
   if (_g.draw.historyData.length > 0) {     // TODO: change to zero
     _g.draw.historyData.forEach(element => {
       var $tr = $('<tr></tr>');
       $tr.append($('<td>'+element.createdate+'</td>'));
       $tr.append($('<td><a href="#" class="text-wheat" onclick="initDetailPart('+element.num+')">'+element.tarot+'</a></td>'));
-      $('tbody').append($tr);
+      $('#page_table table tbody').append($tr);
     });
   } else {
     var $tr = $('<tr></tr>').append($('<td colspan="2">暂无数据，<a href="#" class="text-wheat" onclick="changeModule(\'content\')">点击抽取今日塔罗</d></td>'));
-    $('tbody').append($tr);
+    $('#page_table table tbody').append($tr);
   }
   
   $('#page_table').fadeIn(2000);
@@ -493,6 +503,7 @@ function initDetailPart (num) {
 // withdraw
 function initWithdraw () {
   preventChange();
+  title.text('合约提现');
   $('#content').fadeOut();
   $('#history').fadeOut();
   $('#about').fadeOut();
@@ -508,6 +519,7 @@ function initWithdrawPart () {
 // about
 function initAbout() {
   preventChange();
+  title.text('关于作品');
   $('#content').fadeOut();
   $('#history').fadeOut();
   $('#withdraw').fadeOut();
@@ -528,11 +540,12 @@ btn_drawtarot.on('click', function () {
   // start loading
   page_guide.hide();
   page_loading.show();
-  initLoadingPart();
+  initLoadingPage();
   // draw & save
   _g.draw.num = drawTarotNum();
   _g.draw.time= Date.now();
-  save(initResultPart);
+  console.log('_g.draw.num:'+_g.draw.num+', _g.draw.time:'+_g.draw.time);
+  save(initResultPage, _g.draw.num);
 });
 $('#link_content').on('click', function () {
   changeModule('content');
@@ -570,7 +583,7 @@ window.postMessage({
   'method': 'getAccount'
 }, '*');
 window.addEventListener('message', function (e) {
-  console.log('e:',e);
+  console.log('e:', e);
   if (e.data && e.data.data) {
     if (e.data.data.account) {
       _g.wallet.address = e.data.data.account;
@@ -580,6 +593,5 @@ window.addEventListener('message', function (e) {
     }
   }
 });
-
 // run page
 initIntro();
