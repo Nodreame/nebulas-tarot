@@ -25,7 +25,7 @@ _g.contract.address = _g.state.isDebugging? 'n1vTNx5Q2hx8KALF1NFTxu7KMh5LWEsVRPo
 _g.state.isDebugging= false;        // use to sign now is main/test
 _g.state.isChanging = false;        // use to prevent switch module to fast
 _g.state.changeTime = 1000;
-_g.state.nowModule  = 'content';
+// _g.state.nowModule  = 'content';
 // draw
 _g.draw.imgUrlPrefix= 'assert/img/MajorArcana/';
 _g.draw.num         = -1;     // num of draw
@@ -271,7 +271,7 @@ function getHistoryData () {
 
 /*** page method ***/
 function changeModule (module) {
-  if (_g.state.nowModule === module) { return; }
+  // if (_g.state.nowModule === module) { return; }
   if (_g.state.isChanging) { return; }
   switch (module) {
     case 'content':
@@ -287,7 +287,7 @@ function changeModule (module) {
       initAbout();
       break;
   }
-  _g.state.nowModule = module;
+  // _g.state.nowModule = module;
 }
 function preventChange (ts) {
   ts = ts? ts: _g.state.changeTime;
@@ -421,16 +421,15 @@ function initWalletPage () {
   page_guide.fadeOut();
   page_loading.fadeOut();
   page_result.fadeOut();
-  if (!_g.wallet.plugInExist) {
-    title.text('未检测到浏览器钱包插件');
-    page_wallet.fadeIn();
-  } else if (!_g.wallet.address || _g.wallet.address.length !== 35) {
-    title.text('钱包地址查询失败');
-    $('#tx_wallet').text('请将钱包导入插件，随后刷新页面');
+  if (_g.wallet.address && _g.wallet.address.length === 35) {
+    console.log('prepare for mobile wallet');
+    initContent('guide');
+  } else if (!_g.wallet.plugInExist || !_g.wallet.address || _g.wallet.address.length !== 35) {
+    title.text('钱包地址获取失败');
+    $('#tx_wallet').text('请安装插件并导入钱包，随后刷新页面');
     page_wallet.fadeIn();
   } else {
     console.log('emmm');
-    initContent('guide');
   }
 }
 
