@@ -3,7 +3,7 @@ var title         = $('#title');
 var page_guide    = $('#page_guide');
 var page_loading  = $('#page_loading');
 var page_result   = $('#page_result');
-var page_wallet   = $('#page_wallet');
+// var page_wallet   = $('#page_wallet');
 var btn_drawtarot = $('#btn_drawtarot');
 var tx_loading    = $('#tx_loading');
 var tx_name       = $('#tx_name');
@@ -317,6 +317,9 @@ function changeModule (module) {
     case 'withdraw':
       initWithdraw();
       break;
+    case 'instruction':
+      initInstruction();
+      break;
     case 'about':
       initAbout();
       break;
@@ -370,6 +373,7 @@ function initContent (pagename) {
   preventChange();
   $('#history').fadeOut();
   $('#withdraw').fadeOut();
+  $('#instruction').fadeOut();
   $('#about').fadeOut();
   setTimeout(function () {
       $('#content').fadeIn();
@@ -394,7 +398,7 @@ function initGuidePage () {
   console.log('initGuidePage:', _g.draw.num);
   page_loading.fadeOut();
   page_result.fadeOut();
-  page_wallet.fadeOut();
+  // page_wallet.fadeOut();
   setTimeout(function () {
     page_guide.fadeIn();
     $('#p_content_1').fadeIn(1000);
@@ -411,7 +415,7 @@ function initLoadingPage () {
   // loading text
   page_guide.fadeOut();
   page_result.fadeOut();
-  page_wallet.fadeOut();
+  // page_wallet.fadeOut();
   setTimeout(function () {
     page_loading.show();
   }, 500);
@@ -455,8 +459,8 @@ function initWalletPage () {
     initContent('guide');
   } else if (!_g.wallet.plugInExist || !_g.wallet.address || _g.wallet.address.length !== 35) {
     title.text('钱包地址获取失败');
-    $('#tx_wallet').text('请安装插件并导入钱包，随后刷新页面');
-    page_wallet.fadeIn();
+    // $('#tx_wallet').text('请安装插件并导入钱包，随后刷新页面');
+    // page_wallet.fadeIn();
   } else {
     console.log('emmm');
   }
@@ -469,6 +473,7 @@ function initHistory () {
   $('#content').fadeOut();
   $('#withdraw').fadeOut();
   $('#about').fadeOut();
+  $('#instruction').fadeOut();
   $('#page_detail').fadeOut();
   setTimeout (function () {
     $('#history').fadeIn();
@@ -520,6 +525,7 @@ function initWithdraw () {
   $('#content').fadeOut();
   $('#history').fadeOut();
   $('#about').fadeOut();
+  $('#instruction').fadeOut();
   setTimeout (function () {
     $('#withdraw').fadeIn();
     initWithdrawPart ();
@@ -529,6 +535,19 @@ function initWithdrawPart () {
   $('#page_withdraw').fadeIn(1000);
 }
 
+// instruction
+function initInstruction () {
+  preventChange();
+  title.text('使用指南');
+  $('#content').fadeOut();
+  $('#history').fadeOut();
+  $('#withdraw').fadeOut();
+  $('#about').fadeOut();
+  setTimeout (function () {
+    $('#instruction').fadeIn();
+  }, 500);
+}
+
 // about
 function initAbout() {
   preventChange();
@@ -536,6 +555,7 @@ function initAbout() {
   $('#content').fadeOut();
   $('#history').fadeOut();
   $('#withdraw').fadeOut();
+  $('#instruction').fadeOut();
   setTimeout (function () {
     $('#about').fadeIn();
     initAboutPart ();
@@ -566,8 +586,14 @@ $('#link_history').on('click', function () {
 $('#link_withdraw').on('click', function () {
   changeModule('withdraw');
 });
+$('#link_instruction').on('click', function () {
+  changeModule('instruction');
+});
 $('#link_about').on('click', function () {
   changeModule('about');
+});
+$('#quicklink_instruction').on('click', function () {
+  changeModule('instruction');
 });
 $('#btn_withdraw').on('click', function () {
   var addr = $('#addr_withdraw').val().trim();
