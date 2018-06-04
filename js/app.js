@@ -65,48 +65,7 @@ function detectWallet () {
 /*** chain method ***/
 function save (callback, num) {
   var listenCount = 0;
-  var writerListener = function (data) {
-    console.log('writerListener data:', data);
-    if (listenCount < 8) {
-      Neb.api.getTransactionReceipt({
-        hash: data.txhash
-      }).then (function (response) { // status: 2(pending) 1(success)
-        console.log('response:', response); 
-        if (response.status === 1) {
-          console.log('transaction success!');
-          alert('塔罗记录写入星云链成功!');
-          getData();
-        } else {
-          listenCount++;
-          setTimeout(() => {
-            writerListener(data);
-          }, 5000);
-        }
-      });
-    } else {
-      console.log('timeout');
-      alert('timeout');
-      // TODO: stop 抽牌
-    }
-  }; 
-  var cbStart = function (data) {
-    console.log("callback data: " + JSON.stringify(data));
-    console.log('JSON.stringify(data).indexOf(\'Erro\'):', JSON.stringify(data).indexOf('Error'));
-    if (JSON.stringify(data).indexOf('Error') === -1) {
-      // alert('请求已发送');
-      tx_loading.text('请求已发送');
-      setTimeout(function () {
-        writerListener(data);       // listener of writing state
-        callback.call(this, num);
-      }, 1000);
-    } else {
-      alert('请求已取消');
-      initContent('guide');
-    }
-  };
-  var cbStartTest = function (data) {
-    tx_loading.text(JSON.stringify(data));
-  }
+  var hashCount   = 0;
 
   var to        = _g.contract.address;
   var value     = '0';
@@ -118,8 +77,30 @@ function save (callback, num) {
     },
     callback: _g.state.isDebugging? NebPay.config.testnetUrl: NebPay.config.mainnetUrl,
     // listener: cbStart
-    // listener: cbStartTest
   };
+  var hashListener = function (txhash) {
+    if (hashCount < 8) {
+      Neb.api.getTransactionReceipt({
+        hash: txhash
+      }).then (function (response) { // status: 2(pending) 1(success)
+        console.log('response:', response); 
+        if (response.status === 1) {
+          console.log('write to NEBULAS success!');
+          alert('塔罗记录写入星云链成功!');
+          // callback.call(this, num);       // show Result
+          getData();
+        } else {
+          hashCount++;
+          setTimeout(() => {
+            hashListener(txhash);
+          }, 5000);
+        }
+      });
+    } else {
+      console.log('write to NEBULAS timeout');
+      alert('timeout');
+    }
+  }
   _g.transaction.serialNum = nebPay.call(to, value, callFunc, callArgs, options);
   console.log('_g.transaction.serialNum:', _g.transaction.serialNum);
   /*** can't get success callback ***/
@@ -129,21 +110,38 @@ function save (callback, num) {
         if (listenCount < 8) {
           var data = JSON.parse(dataStr);
           console.log('data:', data);
-          if (data.code === 0 && data.data.status === 1) {    // TODO: 学习这两个状态
-            callback.call(this, num);
-            clearInterval(_g.transaction.intervalQuery);
+          if (data.code === 0) {    // data.code为0即serialNum已确认，可以换hash继续查或者继续等待data.data.status为1
+            if (data.data.status === 1) {
+              callback.call(this, num);
+              getData();
+              clearInterval(_g.transaction.intervalQuery);
+            } else {
+              console.log('get transaction txhash， show tarot and wait for writing to NEBULAS by txhash.');
+              tx_loading.text('抽牌成功！正在将塔罗结果写入星云链！');
+              setTimeout(function () {
+                callback.call(this, num);
+                clearInterval(_g.transaction.intervalQuery);
+                console.log('data.data:', data.data);
+                hashListener(data.data.hash);
+                // tx_loading.text('正在抽牌');    // reset
+              }, 2000);
+            }
           } else {
             console.log("data.msg.indexOf('does not exist')", data.msg.indexOf('does not exist'));
             console.log('listenCount:', listenCount);
             if (data.msg.indexOf('does not exist') !== -1 && listenCount>4) {
-              console.log('已取消');
-              initContent('guide');
-              clearInterval(_g.transaction.intervalQuery);
+              console.log('can\'t recognize state of transaction, so go to guide page.');
+              tx_loading.text('抽牌确认超时，五秒后返回抽牌引导界面');
+              setTimeout(function () {
+                initContent('guide');
+                clearInterval(_g.transaction.intervalQuery);
+                // tx_loading.text('正在抽牌');    // reset
+              }, 5000);
             }
           }
           listenCount++;
         } else {
-          console.log('网络连接超时, 5秒后自动刷新网页');
+          console.log('网络连接超时, 五秒后自动刷新网页');
           clearInterval(_g.transaction.intervalQuery);
           setTimeout(function () {
             window.location.reload(); 
@@ -407,6 +405,7 @@ function initGuidePage () {
 }
 function initLoadingPage () {
   title.text('今日塔罗');
+  tx_loading.text('正在抽牌'); 
   console.log('initLoadingPage');
   // TODO: js洗牌动画
   // loading text
