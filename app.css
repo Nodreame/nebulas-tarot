@@ -8,12 +8,6 @@
 .inversion {
   transform: rotate(180deg);
 }
-.font-16 {
-  font-size: 16px;
-}
-.font-20 {
-  font-size: 20px;
-}
 .wrap {
   margin: auto 30px
 }
@@ -27,6 +21,7 @@
   font-weight: 700;
   text-decoration: none;
   cursor: pointer;
+  outline: none;
 }
 .btn_md {
   padding: 15px 35px;
@@ -36,11 +31,15 @@
   padding: 20px 50px;
   font-size: 24px;
 }
-.footer {
-  position: fixed;
-  padding-bottom: 20px;
-  padding-top: 20px;
-  bottom: 0;
+.btn_wheat {
+  border: 3px solid wheat;
+  color: wheat;
+}
+.font-16 {
+  font-size: 16px;
+}
+.font-20 {
+  font-size: 20px;
 }
 
 a:hover {
@@ -55,7 +54,7 @@ a:hover {
 }
 #title {
   color: wheat;
-  font-size: 42px;
+  font-size: 36px;
   margin-top: 50px;
 }
 #main {

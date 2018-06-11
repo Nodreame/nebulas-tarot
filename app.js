@@ -25,6 +25,7 @@ _g.contract.address = _g.state.isDebugging? 'n1vTNx5Q2hx8KALF1NFTxu7KMh5LWEsVRPo
 _g.state.isDebugging= false;        // use to sign now is main/test
 _g.state.isChanging = false;        // use to prevent switch module to fast
 _g.state.changeTime = 1000;
+_g.state.isHistoryLoading = false;
 // _g.state.nowModule  = 'content';
 // draw
 _g.draw.imgUrlPrefix= 'assert/img/MajorArcana/';
@@ -101,11 +102,11 @@ function save (callback, num) {
       alert('timeout');
     }
   }
-  _g.transaction.serialNum = nebPay.call(to, value, callFunc, callArgs, options);
-  console.log('_g.transaction.serialNum:', _g.transaction.serialNum);
+  var serialNum = nebPay.call(to, value, callFunc, callArgs, options);
+  console.log('serialNum:', serialNum);
   /*** can't get success callback ***/
-  _g.transaction.intervalQuery = setInterval(function() {
-    nebPay.queryPayInfo(_g.transaction.serialNum, options)
+  var intervalQuery = setInterval(function() {
+    nebPay.queryPayInfo(serialNum, options)
       .then(function (dataStr) {
         if (listenCount < 8) {
           var data = JSON.parse(dataStr);
@@ -114,13 +115,13 @@ function save (callback, num) {
             if (data.data.status === 1) {
               callback.call(this, num);
               getData();
-              clearInterval(_g.transaction.intervalQuery);
+              clearInterval(intervalQuery);
             } else {
               console.log('get transaction txhash， show tarot and wait for writing to NEBULAS by txhash.');
               tx_loading.text('抽牌成功！正在将塔罗结果写入星云链！');
               setTimeout(function () {
                 callback.call(this, num);
-                clearInterval(_g.transaction.intervalQuery);
+                clearInterval(intervalQuery);
                 console.log('data.data:', data.data);
                 hashListener(data.data.hash);
                 // tx_loading.text('正在抽牌');    // reset
@@ -134,7 +135,7 @@ function save (callback, num) {
               tx_loading.text('抽牌确认超时，五秒后返回抽牌引导界面');
               setTimeout(function () {
                 initContent('guide');
-                clearInterval(_g.transaction.intervalQuery);
+                clearInterval(intervalQuery);
                 // tx_loading.text('正在抽牌');    // reset
               }, 5000);
             }
@@ -142,10 +143,82 @@ function save (callback, num) {
           listenCount++;
         } else {
           console.log('网络连接超时, 五秒后自动刷新网页');
-          clearInterval(_g.transaction.intervalQuery);
+          clearInterval(intervalQuery);
           setTimeout(function () {
             window.location.reload(); 
           }, 5000);
+        }
+      })
+      .catch(function (error) {
+        console.error(error);
+      });
+  }, 10000);
+}
+// get user data by transation
+function getUserData (isJump2Draw) {
+  var listenCount = 0;
+  var hashCount = 0;
+  var to        = _g.contract.address;
+  var value     = '0';
+  var callFunc  = 'getData';
+  var callArgs  = JSON.stringify([]);
+  var options   = {
+    goods: {
+      name: "get user data"
+    },
+    callback: _g.state.isDebugging? NebPay.config.testnetUrl: NebPay.config.mainnetUrl,
+    // listener: cbStart
+  };
+  var hashListener = function (txhash) {
+    if (hashCount < 8) {
+      Neb.api.getTransactionReceipt({
+        hash: txhash
+      }).then (function (response) { // status: 2(pending) 1(success)
+        console.log('response:', response); 
+        if (response.status === 1) {
+          console.log('getData success!');
+          getData();
+        } else {
+          hashCount++;
+          setTimeout(() => {
+            hashListener(txhash);
+          }, 5000);
+        }
+      });
+    } else {
+      console.log('write to NEBULAS timeout');
+      alert('timeout');
+    }
+  }
+  var serialNum = nebPay.call(to, value, callFunc, callArgs, options);
+  var intervalQuery = setInterval(function() {
+    nebPay.queryPayInfo(serialNum, options)
+      .then(function (dataStr) {
+        if (listenCount < 8) {
+          var data = JSON.parse(dataStr);
+          console.log('data:', data);
+          if (data.code === 0) {    // data.code为0即serialNum已确认，可以换hash继续查或者继续等待data.data.status为1
+            console.log('get transaction txhash， show tarot and wait for writing to NEBULAS by txhash.');
+            setTimeout(function () {
+              clearInterval(intervalQuery);
+              console.log('data.data:', data.data);
+              console.log('地址获取成功data.data.from:', data.data.from);
+              _g.wallet.address = data.data.from;
+              if (isJump2Draw) {
+                // jump to draw
+                initContent(decideContentPage());
+                // TODO2: history show loading
+                // loadingTableData();
+                _g.state.isHistoryLoading = true;
+                $('#instruction_loading').hide();
+              }
+              hashListener(data.data.hash);
+            }, 2000);
+          } 
+          listenCount++;
+        } else {
+          console.error('can\'t recognize state of transaction, so go to guide page.');
+          clearInterval(intervalQuery);
         }
       })
       .catch(function (error) {
@@ -174,6 +247,18 @@ function getData () {
       return JSON.parse(data.result);
     });
   }
+  // 移动端无效
+  // if (nebPay) {
+  //   nebPay.simulateCall(_g.contract.address, 0, 'getData', '[]', {
+  //     listener: function (data) {
+  //       console.log('data:', data);
+  //       _g.draw.allData = JSON.parse(data.result);
+  //       getTodayState();
+  //       getHistoryData();
+  //       return JSON.parse(data.result);
+  //     }
+  //   });
+  // }
 }
 // get total count
 function getDrawTotal () {
@@ -266,7 +351,9 @@ function drawTarotNum () {
 }
 // judge if the last record of this address in today
 function getTodayState () {
-  if (_g.draw.allData.length > 0) {  // TODO: modify to 0
+  var limitNum = _g.state.isDebugging? 1000: 0;
+  // limitNum = 1000; // TODO: del
+  if (_g.draw.allData.length > limitNum) {  // TODO: modify to 0
     var now = new Date();
     console.log('Today: ' + now.getFullYear()   + '年'
                           + (now.getMonth()+1)  + '月'
@@ -291,14 +378,16 @@ function getHistoryData () {
   _g.draw.historyData.length = 0;
   _g.draw.allData.forEach(element => {
     var time = new Date(element.createdate);
-    var createDateStr = time.getFullYear()    + '年'
-                        + (time.getMonth()+1) + '月'
-                        + time.getDate()      + '日';
+    var createDateStr = time.getFullYear()    + '.'
+                        + (time.getMonth()+1) + '.'
+                        + time.getDate()      + '.';
     var tarot = getTarot(element.num);
     var direction = tarot.direction? '正位': '逆位';
     var tarotStr = tarot.name + '(' + direction + ')';
     _g.draw.historyData.push({'num': element.num, 'tarot': tarotStr, 'createdate': createDateStr});
   });
+  _g.state.isHistoryLoading = false;
+  loadTableData();
   console.log('history:', _g.draw.historyData);
 }
 
@@ -350,7 +439,11 @@ function initIntro () {
   setTimeout(function () {
     $('#intro').fadeOut();
     $('#navbar').fadeIn();
-    initContent(decideContentPage());
+    if (_g.wallet.address) {
+      initContent(decideContentPage());
+    } else {
+      changeModule('instruction');
+    }
   }, 5500);
 }
 // judge targetPage by state
@@ -480,9 +573,10 @@ function initHistory () {
     initTablePart ();
   }, 500);
 }
-function initTablePart () {
-  console.log("$('#page_table table tbody'):", $('#page_table table tbody'));
+function loadTableData () {
+  console.log('loadTableData');
   $('#page_table table tbody').empty();
+  // TODO: if without address
   if (_g.draw.historyData.length > 0) {     // TODO: change to zero
     _g.draw.historyData.forEach(element => {
       var $tr = $('<tr></tr>');
@@ -490,11 +584,16 @@ function initTablePart () {
       $tr.append($('<td><a href="#" class="text-wheat" onclick="initDetailPart('+element.num+')">'+element.tarot+'</a></td>'));
       $('#page_table table tbody').append($tr);
     });
+  } else if (_g.state.isHistoryLoading){
+    var $tr = $('<tr></tr>').append($('<td colspan="2">正在加载历史记录中<img src="assert/img/loading.gif" alt="loading"></td>'));
+    $('#page_table table tbody').append($tr);
   } else {
-    var $tr = $('<tr></tr>').append($('<td colspan="2">暂无数据，<a href="#" class="text-wheat" onclick="changeModule(\'content\')">点击抽取今日塔罗</d></td>'));
+    var $tr = $('<tr></tr>').append($('<td colspan="2">暂无数据，<a href="#" class="text-wheat" onclick="changeModule(\'content\')">点击抽取今日塔罗</a></td>'));
     $('#page_table table tbody').append($tr);
   }
-  
+}
+function initTablePart () {
+  loadTableData();
   $('#page_table').fadeIn(2000);
 }
 function initDetailPart (num) {
@@ -566,7 +665,10 @@ function initAboutPart() {
 }
 
 
-
+function collapseClose() {
+  // $('#navlist').attr('aria-expanded', 'false');
+  $('#navlist').collapse('hide');
+}
 /*** event handler ***/
 btn_drawtarot.on('click', function () {
   console.log('btn_drawtarot click');
@@ -577,22 +679,39 @@ btn_drawtarot.on('click', function () {
   initContent('loading');
   save(initResultPage, drawTarotNum());
 });
+$('#btn_login').on('click', function () {
+  getUserData();
+});
 $('#link_content').on('click', function () {
+  collapseClose();
   changeModule('content');
 });
 $('#link_history').on('click', function () {
+  collapseClose();
   changeModule('history');
 });
 $('#link_withdraw').on('click', function () {
+  collapseClose();
   changeModule('withdraw');
 });
 $('#link_instruction').on('click', function () {
+  collapseClose();
   changeModule('instruction');
 });
 $('#link_about').on('click', function () {
+  collapseClose();
   changeModule('about');
 });
+$('#link_draw').on('click', function () {
+  if (_g.wallet.address) {
+    initContent(decideContentPage());
+  } else {
+    getUserData(true);
+    $('#instruction_loading').show();
+  }
+});
 $('#quicklink_instruction').on('click', function () {
+  collapseClose();
   changeModule('instruction');
 });
 $('#btn_withdraw').on('click', function () {
