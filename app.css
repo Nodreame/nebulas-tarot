@@ -1,3 +1,11 @@
+body {
+  background: url('assert/img/bg1.jpg') no-repeat 0 0;
+  /* -webkit-background-size: cover;
+  -moz-background-size: cover;
+  -o-background-size: cover;
+  -ms-background-size: cover;
+  background-size: cover; */
+}
 /*** Common Style ***/
 .text-white {
   color: white;
@@ -42,7 +50,11 @@
   font-size: 20px;
 }
 
-a:hover {
+a:link,
+a:visited,
+a:hover,
+a:focus,
+a:active {
   font-weight: 700;
   color: wheat;
 }
