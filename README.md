@@ -11,7 +11,11 @@ npm start
 
 ## FlowChart
 
-![上链版本流程图](./flowchart/flowChart-nebulas.png)
+![V3.0-MobileFirst](./flowchart/flowChartV3.0-mobilefirst.png)
+
+## Effect diagram
+
+- [效果图](./effect_pic)
 
 ## DevList
 
