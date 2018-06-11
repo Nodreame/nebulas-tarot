@@ -266,7 +266,7 @@ function drawTarotNum () {
 }
 // judge if the last record of this address in today
 function getTodayState () {
-  if (_g.draw.allData.length > 50) {  // TODO: modify to 0
+  if (_g.draw.allData.length > 0) {  // TODO: modify to 0
     var now = new Date();
     console.log('Today: ' + now.getFullYear()   + '年'
                           + (now.getMonth()+1)  + '月'
